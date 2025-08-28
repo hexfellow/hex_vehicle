@@ -13,9 +13,9 @@ script_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(script_path)
 from utility import DataInterface
 
-from .proto import public_api_down_pb2
-from .proto import public_api_types_pb2
-from .proto import public_api_up_pb2
+import public_api_down_pb2
+import public_api_types_pb2
+import public_api_up_pb2
 
 class ChassisTrans:
     def __init__(self):

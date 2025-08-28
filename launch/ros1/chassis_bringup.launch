@@ -14,7 +14,7 @@
         <param name="simple_mode" value="$(arg simple_mode)" />
         
         <!-- subscribe -->
-        <remap from="/motor_states" to="/motor_states" />
+        <remap from="/motor_status" to="/motor_status" />
         <remap from="/real_vel" to="/real_vel" />
         <!-- publish -->
         <remap from="/joint_ctrl" to="/joint_ctrl" />

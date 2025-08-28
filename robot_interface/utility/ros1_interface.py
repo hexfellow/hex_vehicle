@@ -48,8 +48,8 @@ class DataInterface(InterfaceBase):
 
         # subscriber
         self.__ws_up_sub = rospy.Subscriber(
-            UInt8MultiArray,
             'ws_up',
+            UInt8MultiArray,
             self.__ws_up_callback,
         )
         self.__ws_up_sub
@@ -100,7 +100,7 @@ class DataInterface(InterfaceBase):
         out.data = data
         self.__ws_down_pub.publish(out)    
 
-    def pub_motor_state(self, pos: List[float], vel: List[float], eff: List[float]):
+    def pub_motor_status(self, pos: List[float], vel: List[float], eff: List[float]):
         out = JointState()
         out.header.stamp = rospy.Time.now()
         out.name = [f"joint{i}" for i in range(len(pos))]
