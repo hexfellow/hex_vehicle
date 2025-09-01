@@ -1,2 +1,2 @@
 #!/bin/bash
-protoc --experimental_allow_proto3_optional -I=proto-public-api --python_out=robot_interface/ proto-public-api/*.proto
+protoc -I=proto-public-api --python_out=robot_interface/ proto-public-api/*.proto

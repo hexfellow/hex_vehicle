@@ -8,17 +8,6 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Declare the launch arguments
-    rate_ros = DeclareLaunchArgument(
-        'rate_ros',
-        default_value='300.0',
-        description='Rate of the ROS node.'
-    )
-    rate_state = DeclareLaunchArgument(
-        'rate_state',
-        default_value='200.0',
-        description='Rate of the state node.'
-    )
-
     frame_id = DeclareLaunchArgument(
         'frame_id',
         default_value='base_link',
@@ -39,8 +28,6 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[{
-            'rate_ros': LaunchConfiguration('rate_ros'),
-            'rate_state': LaunchConfiguration('rate_state'),
             'frame_id': LaunchConfiguration('frame_id'),
             'simple_mode': LaunchConfiguration('simple_mode'),
         }],
@@ -48,6 +35,7 @@ def generate_launch_description():
             # subscribe
             ('/motor_status', '/motor_status'),
             ('/real_vel', '/real_vel'),
+            ('/odom', '/odom'),
             # publish
             ('/joint_ctrl', '/joint_ctrl'),
             ('/cmd_vel', '/cmd_vel'),
@@ -56,8 +44,6 @@ def generate_launch_description():
 
     # Return the LaunchDescription
     return LaunchDescription([
-        rate_ros,
-        rate_state,
         frame_id,
         simple_mode,
         piper_node

@@ -8,9 +8,17 @@ import numpy as np
 
 import rclpy
 import rclpy.node
-from std_msgs.msg import UInt8MultiArray
 from geometry_msgs.msg import TwistStamped, Twist
 from sensor_msgs.msg import JointState
+from nav_msgs.msg import Odometry
+from std_msgs.msg import UInt8MultiArray
+
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import public_api_down_pb2
+import public_api_types_pb2
+import public_api_up_pb2
 
 from .interface_base import InterfaceBase
 
@@ -23,21 +31,17 @@ class DataInterface(InterfaceBase):
         rclpy.init()
         self.__node = rclpy.node.Node(name)
         self.__logger = self.__node.get_logger()
-        self.__node.declare_parameter('rate_ros', 300.0)
-        rate_value = self.__node.get_parameter('rate_ros').value
-        self._rate_param["ros"] = float(rate_value if rate_value is not None else 300.0)
-        self.__rate = self.__node.create_rate(self._rate_param["ros"])
+        self.__rate = self.__node.create_rate(300.0)
 
         # pamameter
         # declare parameters
-        self.__node.declare_parameter('rate_state', 200.0)
-        self._rate_param["state"] = self.__node.get_parameter('rate_state').value
-
         self.__node.declare_parameter('frame_id', "base_link")
         self.__frame_id = self.__node.get_parameter('frame_id').value
 
         self.__node.declare_parameter('simple_mode', True)
         self._simple_mode = self.__node.get_parameter('simple_mode').value
+
+        self.__api_initialized = False
 
         # publisher
         self.__ws_down_pub = self.__node.create_publisher(
@@ -55,6 +59,11 @@ class DataInterface(InterfaceBase):
             'real_vel',
             10,
         )
+        self.__odom_pub = self.__node.create_publisher(
+            Odometry,
+            'odom',
+            10,
+        )
 
         # subscriber
         self.__ws_up_sub = self.__node.create_subscription(
@@ -63,23 +72,25 @@ class DataInterface(InterfaceBase):
             self.__ws_up_callback,
             10,
         )
-        self.__joint_ctrl_sub = self.__node.create_subscription(
-            JointState,
-            'joint_ctrl',
-            self.__joint_ctrl_callback,
-            10,
-        )
-        self.__cmd_vel_sub = self.__node.create_subscription(
-            Twist,
-            'cmd_vel',
-            self.__cmd_vel_callback,
-            10,
-        )
-
         self.__ws_up_sub
-        self.__joint_ctrl_sub
-        self.__cmd_vel_sub
 
+        if self._simple_mode:
+            self.__cmd_vel_sub = self.__node.create_subscription(
+                Twist,
+                'cmd_vel',
+                self.__cmd_vel_callback,
+                10,
+            )
+            self.__cmd_vel_sub
+        else:
+            self.__joint_ctrl_sub = self.__node.create_subscription(
+                JointState,
+                'joint_ctrl',
+                self.__joint_ctrl_callback,
+                10,
+            )
+            self.__joint_ctrl_sub        
+        
         # spin thread
         self.__spin_thread = threading.Thread(target=self.__spin)
         self.__spin_thread.start()
@@ -141,12 +152,76 @@ class DataInterface(InterfaceBase):
         msg.twist.angular.z = yaw
         self.__real_vel_pub.publish(msg)
 
+    def pub_odom(self, pos_x: float, pos_y: float, pos_yaw: float, linear_x: float, linear_y: float, angular_z: float):
+        out = Odometry()
+        now = self.__node.get_clock().now()
+        out.header.stamp = now.to_msg()
+        out.header.frame_id = "odom"
+        out.child_frame_id = self.__frame_id
+        out.pose.pose.position.x = pos_x
+        out.pose.pose.position.y = pos_y
+        out.pose.pose.position.z = 0.0
+        qz = np.sin(pos_yaw / 2.0)
+        qw = np.cos(pos_yaw / 2.0)
+        out.pose.pose.orientation.x = 0.0
+        out.pose.pose.orientation.y = 0.0
+        out.pose.pose.orientation.z = qz
+        out.pose.pose.orientation.w = qw
+        out.twist.twist.linear.x = linear_x
+        out.twist.twist.linear.y = linear_y
+        out.twist.twist.angular.z = angular_z
+        self.__odom_pub.publish(out)
+
     # sub
     def __ws_up_callback(self, msg: UInt8MultiArray):
-            self._bin_msg_queue.put(msg.data)
+        api_up = public_api_up_pb2.APIUp()
+        api_up.ParseFromString(bytes(msg.data))
+        self.__api_initialized = api_up.base_status.api_control_initialized
+        # parse data
+        pp, vv, tt = self._prase_wheel_data(api_up)
+        (spd_x, spd_y, spd_z), (pos_x, pos_y, pos_z) = self._parse_vehicle_data(api_up)
+        acc, angular_velocity, quaternion = self._parse_imu_data(api_up)
+        # publish data
+        self.pub_motor_status(pp, vv, tt)
+        self.pub_real_vel(spd_x, spd_y, spd_z)
+        self.pub_odom(pos_x, pos_y, pos_z, spd_x, spd_y, spd_z)
 
     def __joint_ctrl_callback(self, msg: JointState):
-            self._joint_ctrl_queue.put(msg)
+        if not self.__api_initialized:
+            api_init = public_api_down_pb2.APIDown()
+            api_init.base_command.api_control_initialize = True
+            bin = api_init.SerializeToString()
+            self.pub_ws_down(bin)
+        length = len(msg.name)
+        if length != len(msg.position) or length != len(msg.velocity) or length != len(msg.effort):
+            self.logw("JointState message format error.")
+            return
+        api_down = public_api_down_pb2.APIDown()
+        for i in range(length):
+            joint_cmd = api_down.base_command.motor_targets.targets.add()
+            # joint_cmd.position = msg.position[i]
+            joint_cmd.speed = msg.velocity[i]
+            # joint_cmd.torque = msg.effort[i]
+        bin = api_down.SerializeToString()
+        self.pub_ws_down(list(bin))
 
     def __cmd_vel_callback(self, msg: Twist):
-            self._cmd_vel_queue.put(msg)
+        if not self.__api_initialized:
+            api_init = public_api_down_pb2.APIDown(
+                base_command = public_api_types_pb2.BaseCommand(api_control_initialize = True)
+            )
+            bin = api_init.SerializeToString()
+            self.pub_ws_down(bin)
+        api_down = public_api_down_pb2.APIDown(
+            base_command = public_api_types_pb2.BaseCommand(
+                simple_move_command = public_api_types_pb2.SimpleBaseMoveCommand(
+                    xyz_speed = public_api_types_pb2.XyzSpeed(
+                        speed_x = msg.linear.x,
+                        speed_y = msg.linear.y,
+                        speed_z = msg.angular.z
+                    )
+                )
+            )
+        )
+        bin = api_down.SerializeToString()
+        self.pub_ws_down(bin)
