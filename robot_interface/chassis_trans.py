@@ -71,10 +71,10 @@ class ChassisTrans:
         if api_up.base_status.IsInitialized():
             spd_x = api_up.base_status.estimated_odometry.speed_x
             spd_y = api_up.base_status.estimated_odometry.speed_y
-            spd_r = api_up.base_status.estimated_odometry.speed_z
+            spd_z = api_up.base_status.estimated_odometry.speed_z
             pos_x = api_up.base_status.estimated_odometry.pos_x
             pos_y = api_up.base_status.estimated_odometry.pos_y
-            pos_r = api_up.base_status.estimated_odometry.pos_z
+            pos_z = api_up.base_status.estimated_odometry.pos_z
         return (spd_x, spd_y, spd_z), (pos_x, pos_y, pos_z)
     
     def _parse_imu_data(self, api_up: public_api_up_pb2.APIUp) -> Tuple[Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float, float]]:
