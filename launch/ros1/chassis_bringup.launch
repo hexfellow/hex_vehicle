@@ -4,7 +4,7 @@
     <arg name="simple_mode" default="true" />
 
     <!-- parameter -->
-    <node name="hex_chassis" pkg="robot_interface" type="chassis_trans.py" output="screen" >
+    <node name="hex_chassis" pkg="hex_vehicle" type="chassis_trans.py" output="screen" >
         <!-- parameter -->
         <param name="frame_id" value="$(arg frame_id)" />
         <param name="simple_mode" value="$(arg simple_mode)" />

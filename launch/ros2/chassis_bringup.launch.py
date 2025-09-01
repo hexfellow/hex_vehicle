@@ -22,7 +22,7 @@ def generate_launch_description():
 
     # Define the node
     piper_node = Node(
-        package='robot_interface',
+        package='hex_vehicle',
         executable='chassis_trans',
         name='hex_chassis',
         output='screen',

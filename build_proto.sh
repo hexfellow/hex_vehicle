@@ -1,2 +1,2 @@
 #!/bin/bash
-protoc -I=proto-public-api --python_out=robot_interface/ proto-public-api/*.proto
+protoc -I=proto-public-api --python_out=hex_vehicle/ proto-public-api/*.proto

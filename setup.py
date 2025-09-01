@@ -2,7 +2,7 @@ import os
 from setuptools import setup, find_packages
 from glob import glob
 
-package_name = 'robot_interface'
+package_name = 'hex_vehicle'
 
 def get_files(tar: str, src: str):
     all_paths = glob(f'{src}/*')
@@ -36,7 +36,7 @@ setup(
     license='TODO: License declaration',
     entry_points={
         'console_scripts': [
-            "chassis_trans = robot_interface.chassis_trans:main",
+            "chassis_trans = hex_vehicle.chassis_trans:main",
         ],
     },
 )

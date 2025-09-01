@@ -1,4 +1,4 @@
-# robot_interface
+# hex_vehicle
 ## Notice
 Must be cd to the directory where build_proto.sh is located first, then run:
 ```
