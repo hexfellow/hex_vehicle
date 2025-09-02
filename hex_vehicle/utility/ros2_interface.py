@@ -41,8 +41,6 @@ class DataInterface(InterfaceBase):
         self.__node.declare_parameter('simple_mode', True)
         self._simple_mode = self.__node.get_parameter('simple_mode').value
 
-        self.__api_initialized = False
-
         # publisher
         self.__ws_down_pub = self.__node.create_publisher(
             UInt8MultiArray,
@@ -176,18 +174,22 @@ class DataInterface(InterfaceBase):
     def __ws_up_callback(self, msg: UInt8MultiArray):
         api_up = public_api_up_pb2.APIUp()
         api_up.ParseFromString(bytes(msg.data))
-        self.__api_initialized = api_up.base_status.api_control_initialized
+        self._api_initialized = api_up.base_status.api_control_initialized
         # parse data
         pp, vv, tt = self._prase_wheel_data(api_up)
         (spd_x, spd_y, spd_z), (pos_x, pos_y, pos_z) = self._parse_vehicle_data(api_up)
         acc, angular_velocity, quaternion = self._parse_imu_data(api_up)
+        if not self._is_set_vehicle_origin_position:
+            self._reset_vehicle_position(pos_x, pos_y, pos_z)
+            self._is_set_vehicle_origin_position = True
+        (relative_x, relative_y, relative_yaw) = self._get_vehicle_position(pos_x, pos_y, pos_z)
         # publish data
         self.pub_motor_status(pp, vv, tt)
         self.pub_real_vel(spd_x, spd_y, spd_z)
-        self.pub_odom(pos_x, pos_y, pos_z, spd_x, spd_y, spd_z)
+        self.pub_odom(relative_x, relative_y, relative_yaw, spd_x, spd_y, spd_z)
 
     def __joint_ctrl_callback(self, msg: JointState):
-        if not self.__api_initialized:
+        if not self._api_initialized:
             api_init = public_api_down_pb2.APIDown()
             api_init.base_command.api_control_initialize = True
             bin = api_init.SerializeToString()
@@ -206,7 +208,7 @@ class DataInterface(InterfaceBase):
         self.pub_ws_down(list(bin))
 
     def __cmd_vel_callback(self, msg: Twist):
-        if not self.__api_initialized:
+        if not self._api_initialized:
             api_init = public_api_down_pb2.APIDown(
                 base_command = public_api_types_pb2.BaseCommand(api_control_initialize = True)
             )

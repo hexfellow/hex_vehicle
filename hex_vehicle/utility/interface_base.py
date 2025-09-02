@@ -3,6 +3,7 @@
 
 import json
 from math import pi as PI
+import numpy as np
 from typing import Tuple, List
 from abc import ABC, abstractmethod
 
@@ -22,6 +23,14 @@ class InterfaceBase(ABC):
         # name
         self._name = name
         print(f"#### InterfaceBase init: {self._name} ####")
+
+        self._api_initialized = False
+        self._is_set_vehicle_origin_position = False
+        self._vehicle_origin_position = np.array([
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0]
+        ])
 
     def __del__(self):
         self.shutdown()
@@ -105,3 +114,31 @@ class InterfaceBase(ABC):
             angular_velocity = (api_up.imu_data.angular_velocity.wx, api_up.imu_data.angular_velocity.wy, api_up.imu_data.angular_velocity.wz)
             quaternion = (api_up.imu_data.quaternion.qx, api_up.imu_data.quaternion.qy, api_up.imu_data.quaternion.qz, api_up.imu_data.quaternion.qw)
         return acc, angular_velocity, quaternion
+    
+    def _get_vehicle_position(self, x, y, yaw) -> Tuple[float, float, float]:
+        cos_yaw = np.cos(yaw)
+        sin_yaw = np.sin(yaw)
+        current_matrix = np.array([
+            [cos_yaw, -sin_yaw, x],
+            [sin_yaw,  cos_yaw, y],
+            [0.0,      0.0,     1.0]
+        ])
+        # Calculate relative transformation: current * inverse(origin)
+        origin_inv = np.linalg.inv(self._vehicle_origin_position)
+        relative_matrix = origin_inv @ current_matrix
+        # Extract position and orientation from relative matrix
+        relative_x = relative_matrix[0, 2]
+        relative_y = relative_matrix[1, 2]
+        relative_yaw = np.arctan2(relative_matrix[1, 0], relative_matrix[0, 0])
+        
+        return (relative_x, relative_y, relative_yaw)
+    
+    def _reset_vehicle_position(self, x, y, yaw):
+        # Convert (x, y, yaw) to 2D transformation matrix
+        cos_yaw = np.cos(yaw)
+        sin_yaw = np.sin(yaw)
+        self._vehicle_origin_position = np.array([
+            [cos_yaw, -sin_yaw, x],
+            [sin_yaw,  cos_yaw, y],
+            [0.0,      0.0,     1.0]
+        ])
