@@ -1,19 +1,28 @@
 <launch>
     <!-- arg -->
+    <arg name="url" default="" />
+    <arg name="read_only" default="false" />
     <arg name="frame_id" default="base_link" />
     <arg name="simple_mode" default="true" />
 
-    <!-- parameter -->
+    <!-- node -->
+    <node name="xnode_bridge" pkg="xpkg_bridge" type="xnode_bridge" respawn="false" output="screen" required="false">
+        <param name="url" value="$(arg url)"/>
+        <param name="read_only" value="$(arg read_only)"/>
+
+        <remap from="/ws_up" to="/ws_up" />
+        <remap from="/ws_down" to="/ws_down" />
+    </node>
+
     <node name="hex_chassis" pkg="hex_vehicle" type="chassis_trans.py" output="screen" >
         <!-- parameter -->
         <param name="frame_id" value="$(arg frame_id)" />
         <param name="simple_mode" value="$(arg simple_mode)" />
         
-        <!-- subscribe -->
         <remap from="/motor_status" to="/motor_status" />
         <remap from="/real_vel" to="/real_vel" />
         <remap from="odom" to="/odom" />
-        <!-- publish -->
+
         <remap from="/joint_ctrl" to="/joint_ctrl" />
         <remap from="/cmd_vel" to="/cmd_vel" />
     </node>

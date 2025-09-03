@@ -37,6 +37,7 @@ setup(
     entry_points={
         'console_scripts': [
             "chassis_trans = hex_vehicle.chassis_trans:main",
+            "chassis_key_control = hex_vehicle.chassis_key_control:main"
         ],
     },
 )

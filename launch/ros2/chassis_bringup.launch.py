@@ -8,6 +8,18 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     # Declare the launch arguments
+    url = DeclareLaunchArgument(
+        'url',
+        default_value='',
+        description='The URL of the robot.'
+    )
+
+    read_only = DeclareLaunchArgument(
+        'read_only',
+        default_value='false',
+        description='Whether to read only the chassis state.'
+    )
+
     frame_id = DeclareLaunchArgument(
         'frame_id',
         default_value='base_link',
@@ -21,7 +33,25 @@ def generate_launch_description():
     )
 
     # Define the node
-    piper_node = Node(
+    xpkg_bridge_node = Node(
+        package='xpkg_bridge',
+        executable='xnode_bridge',
+        name='xnode_bridge',
+        output='screen',
+        emulate_tty=True,
+        parameters=[{
+            'url': LaunchConfiguration('url'),
+            'read_only': LaunchConfiguration('read_only'),
+        }],
+        remappings=[
+            # subscribe
+            ('/ws_down', '/ws_down'),
+            # publish
+            ('/ws_up', '/ws_up')
+        ]
+    )
+
+    hex_vehicle_node = Node(
         package='hex_vehicle',
         executable='chassis_trans',
         name='hex_chassis',
@@ -44,7 +74,10 @@ def generate_launch_description():
 
     # Return the LaunchDescription
     return LaunchDescription([
+        url,
+        read_only,
         frame_id,
         simple_mode,
-        piper_node
+        xpkg_bridge_node,
+        hex_vehicle_node
     ])
