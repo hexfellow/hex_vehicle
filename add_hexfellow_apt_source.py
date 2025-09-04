@@ -79,10 +79,10 @@ def add_hexfellow_apt_source(force: bool = False) -> None:
     # Check if hexfellow apt source is already added
     hexfellow_source_path = "/etc/apt/sources.list.d/hexfellow.sources"
     if os.path.exists(hexfellow_source_path):
-        color_print("hexfellow-apt-source-exists", "green")
+        color_print("HexFellow apt source already exists", "green")
         return
     
-    color_print("prompt-add-apt-source", "green")
+    color_print("Adding hexfellow apt source", "green")
     
     # Get Ubuntu version codename
     def get_ubuntu_codename() -> str:
@@ -138,7 +138,7 @@ Signed-By: /usr/share/keyrings/hexfellow.gpg.key
         if not run_command_live("sudo apt-get update"):
             raise RuntimeError("Failed to update apt cache")
         
-        color_print("apt-source-added", "green")
+        color_print("HexFellow apt source added successfully.", "green")
         
         # Install hexfellow-rosdep-meta package
         if not run_command_live("sudo apt-get install -y hexfellow-rosdep-meta"):

@@ -1,25 +1,8 @@
 # hex_vehicle
-## Notice
-1. Compile Protocol Buffer messages:  
-Note: This package requires newer protoc. If compilation fails, please try to install protoc-27.1 using the binary installation method below. Installing protoc-27.1:
-```
-# For Linux x86_64
-wget https://github.com/protocolbuffers/protobuf/releases/download/v27.1/protoc-27.1-linux-x86_64.zip
-sudo unzip protoc-27.1-linux-x86_64.zip -d /usr/local
-rm protoc-27.1-linux-x86_64.zip
-
-# For Linux arm64
-wget https://github.com/protocolbuffers/protobuf/releases/download/v27.1/protoc-27.1-linux-aarch_64.zip
-sudo unzip protoc-27.1-linux-aarch_64.zip -d /usr/local
-rm protoc-27.1-linux-aarch_64.zip
-
-#  Verify installation
-protoc --version  # Should show libprotoc 27.1
-```
-2. Must be cd to the directory where build_proto.sh is located first, then run:
-```
-./build_proto.sh
-```
+## Overview
+This is a ROS packdge that provides ROS interface for hex vehicle.
+## Prerequisites & Usage
+Please check the [docs](https://docs.hexfellow.com/hex-base/ros-maver-x4_en/)
 ## Publish
 | Topic           | Msg Type                     | Description               |
 | --------------- | ---------------------------- | ------------------------- |
