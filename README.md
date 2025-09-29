@@ -2,7 +2,7 @@
 ## Overview
 This is a ROS packdge that provides ROS interface for hex vehicle.
 ## Prerequisites & Usage
-Please check the [docs](https://docs.hexfellow.com/hex-base/ros-maver-x4_en/)
+Please check the [docs](https://docs.hexfellow.com/hex-base/ros-x4_en/)
 ## Publish
 | Topic           | Msg Type                     | Description               |
 | --------------- | ---------------------------- | ------------------------- |
