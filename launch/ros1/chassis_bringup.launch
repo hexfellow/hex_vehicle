@@ -25,5 +25,6 @@
 
         <remap from="/joint_ctrl" to="/joint_ctrl" />
         <remap from="/cmd_vel" to="/cmd_vel" />
+        <remap from="/clear_err" to="/clear_err" />
     </node>
 </launch>

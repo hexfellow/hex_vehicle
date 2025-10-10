@@ -16,6 +16,7 @@ Please check the [docs](https://docs.hexfellow.com/hex-base/ros_en/)
 | /`ws_up`      | `std_msgs/UInt8MultiArray` | Message to send to ws |
 | /`joint_ctrl` | `sensor_msgs/JointState`   | Joint control command |
 | /`cmd_vel`    | `geometry_msgs/Twist`      | Cmd velocity          |
+| /`clear_err` | `std_msgs/Bool` | Clear parking stop error |
 ## Parameter
 | Name        | Data Type | Required | Default Value | Description           | Note |
 | ----------- | --------- | -------- | ------------- | --------------------- | ---- |

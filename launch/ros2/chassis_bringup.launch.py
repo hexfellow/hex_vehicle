@@ -69,6 +69,7 @@ def generate_launch_description():
             # publish
             ('/joint_ctrl', '/joint_ctrl'),
             ('/cmd_vel', '/cmd_vel'),
+            ('/clear_err', '/clear_err')
         ]
     )
 

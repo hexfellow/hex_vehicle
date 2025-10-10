@@ -14,7 +14,7 @@ import sys
 
 scrpit_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(scrpit_path)
-from utility import TeleopKeyboard
+from ros_interface import TeleopKeyboard
 
 def main(args=None):
     """Main function to start teleop keyboard control"""
