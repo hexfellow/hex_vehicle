@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-import threading
-
 import rclpy
 import rclpy.node
 from ament_index_python.packages import get_package_share_directory
@@ -16,12 +14,7 @@ class DataInterface(InterfaceBase):
         self.__node = rclpy.node.Node(self._node_name)
         self.__logger = self.__node.get_logger()
         self.__rate = self.__node.create_rate(300.0)
-        self.timer = None
-
-        # spin thread
-        self.__spin_thread = threading.Thread(target=self.__spin)
-        self.__spin_thread.daemon = True
-        self.__spin_thread.start()
+        self.__should_exit = False  # Flag to control spin loop
 
     def create_publisher(self, msg_type, topic: str, queue_size: int = 10):
         return self.__node.create_publisher(msg_type, topic, queue_size)
@@ -30,13 +23,12 @@ class DataInterface(InterfaceBase):
         self.__node.create_subscription(msg_type, topic, callback, queue_size)
 
     def create_timer(self, interval_sec: float, callback):
-        self.timer = self.__node.create_timer(interval_sec, callback)
-        return self.timer
-    
-    def cancel_timer(self):
-        if self.timer is not None:
-            self.timer.cancel()
-            self.timer = None
+        timer = self.__node.create_timer(interval_sec, callback)
+        return timer
+
+    def cancel_timer(self, timer):
+        if timer is not None:
+            timer.cancel()
             
     def set_parameter(self, name: str, value):
         self.__node.declare_parameter(name, value)
@@ -44,16 +36,19 @@ class DataInterface(InterfaceBase):
     def get_parameter(self, name: str):
         return self.__node.get_parameter(name).value
     
-    def __spin(self):
-        rclpy.spin(self.__node)
+    def spin(self):
+        while rclpy.ok() and not self.__should_exit:
+            rclpy.spin_once(self.__node, timeout_sec=0.1)
 
     def ok(self):
         return rclpy.ok()
 
     def shutdown(self):
-        self.__spin_thread.join()
+        # Set exit flag first to stop spin loop
+        self.__should_exit = True
+        # Destroy node and shutdown rclpy
         self.__node.destroy_node()
-        if self.ok():
+        if rclpy.ok():
             rclpy.shutdown()
 
     def sleep(self):

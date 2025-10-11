@@ -23,10 +23,19 @@ class InterfaceBase(ABC):
     
     @abstractmethod
     def create_timer(self, interval_sec: float, callback):
+        """
+        Create a timer that calls the callback at the specified interval.
+        Returns a timer object that can be used to cancel the timer.
+        """
         raise NotImplementedError("InterfaceBase.create_timer")
-    
+
     @abstractmethod
-    def cancel_timer(self):
+    def cancel_timer(self, timer):
+        """
+        Cancel the specified timer.
+        Args:
+            timer: The timer object returned by create_timer()
+        """
         raise NotImplementedError("InterfaceBase.cancel_timer")
     
     @abstractmethod
@@ -36,6 +45,10 @@ class InterfaceBase(ABC):
     @abstractmethod
     def get_parameter(self, name: str):
         raise NotImplementedError("InterfaceBase.get_parameter")
+    
+    @abstractmethod
+    def spin(self):
+        raise NotImplementedError("InterfaceBase.spin")
     
     @abstractmethod
     def ok(self) -> bool:

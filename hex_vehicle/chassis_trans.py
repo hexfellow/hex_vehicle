@@ -36,6 +36,12 @@ class ChassisInterface:
             [0.0, 0.0, 1.0]
         ])
 
+        self.__parking_stop_detail = public_api_types_pb2.ParkingStopDetail()
+        self.__last_warning_time = time.perf_counter()
+
+        self.__session_id = None
+        self.__session_holder = None
+
         # Timeout monitoring
         self.__last_cmd_time = None  # Last control command timestamp
         self.__timeout_threshold = 0.3  # 300ms timeout threshold
@@ -59,16 +65,20 @@ class ChassisInterface:
             self.data_interface.create_subscriber(JointState, "joint_ctrl", self.__joint_ctrl_callback)
         self.data_interface.create_subscriber(Bool, "clear_err", self.__clear_err_callback)
 
-        # Create timeout check timer (check every 100ms)
-        self.data_interface.create_timer(0.1, self.__timeout_check_callback)
+        self.__timeout_timer = self.data_interface.create_timer(0.1, self.__timeout_check_callback)
+        self.__session_timer = self.data_interface.create_timer(1.0, self.__session_check_callback)
 
     # pub
     def pub_ws_down(self, data: List[int]):
+        if not self.data_interface.ok():
+            return
         msg = UInt8MultiArray()
         msg.data = data
         self.__ws_down_pub.publish(msg)
 
     def pub_motor_status(self, pos: List[float], vel: List[float], eff: List[float]):
+        if not self.data_interface.ok():
+            return
         length = len(pos)
         msg = JointState()
         msg.header.stamp = self.data_interface.get_timestamp()
@@ -79,6 +89,8 @@ class ChassisInterface:
         self.__motor_status_pub.publish(msg)
 
     def pub_real_vel(self, x: float, y: float, yaw: float):
+        if not self.data_interface.ok():
+            return
         msg = TwistStamped()
         msg.header.stamp = self.data_interface.get_timestamp()
         msg.header.frame_id = self.__frame_id
@@ -88,6 +100,8 @@ class ChassisInterface:
         self.__real_vel_pub.publish(msg)
 
     def pub_odom(self, pos_x: float, pos_y: float, pos_yaw: float, linear_x: float, linear_y: float, angular_z: float):
+        if not self.data_interface.ok():
+            return
         out = Odometry()
         out.header.stamp = self.data_interface.get_timestamp()
         out.header.frame_id = "odom"
@@ -112,6 +126,13 @@ class ChassisInterface:
         api_up.ParseFromString(bytes(msg.data))
         with self.__lock:
             self.__api_initialized = api_up.base_status.api_control_initialized
+            if api_up.base_status.HasField("parking_stop_detail"):
+                self.__parking_stop_detail = api_up.base_status.parking_stop_detail
+            else:
+                self.__parking_stop_detail = public_api_types_pb2.ParkingStopDetail()
+            self.__session_id = api_up.session_id
+            self.__session_holder = api_up.base_status.session_holder
+        self.__check_parking_stop_detail()
         # parse data
         pp, vv, tt = self.prase_wheel_data(api_up)
         (spd_x, spd_y, spd_z), (pos_x, pos_y, pos_z) = self.parse_vehicle_data(api_up)
@@ -182,7 +203,6 @@ class ChassisInterface:
             self.pub_ws_down(bin)
 
     def __timeout_check_callback(self):
-        """Periodically check if control command has timed out"""
         need_disable = False
 
         with self.__lock:
@@ -193,7 +213,7 @@ class ChassisInterface:
 
         # Send disable command and shutdown node
         if need_disable:
-            self.data_interface.loge("chassis disabled due to command timeout")
+            self.data_interface.loge("chassis disabled due to command timeout, please restart node !!!")
             # Send disable command
             api_down = public_api_down_pb2.APIDown(
                 base_command = public_api_types_pb2.BaseCommand(
@@ -203,7 +223,24 @@ class ChassisInterface:
             bin = api_down.SerializeToString()
             self.pub_ws_down(list(bin))
             # Shutdown node
+            self.data_interface.cancel_timer(self.__timeout_timer)
             self.data_interface.shutdown()
+
+    def __check_parking_stop_detail(self):
+        start_time = time.perf_counter()
+        with self.__lock:
+            parking_stop_detail = self.__parking_stop_detail
+        if parking_stop_detail != public_api_types_pb2.ParkingStopDetail():
+            if start_time - self.__last_warning_time > 1.0:
+                self.data_interface.loge(f"emergency stop: {parking_stop_detail}")
+                self.__last_warning_time = start_time
+
+    def __session_check_callback(self):
+        with self.__lock:
+            session_id = self.__session_id
+            session_holder = self.__session_holder
+        if session_id != session_holder:
+            self.data_interface.logw(f"You can not control this vehicle, because session holder is {session_holder}, but you are {session_id}")
 
     def prase_wheel_data(self, api_up: public_api_up_pb2.APIUp) -> Tuple[list, list, list]:
         vv = []
@@ -273,8 +310,8 @@ class ChassisInterface:
 def main():
     chassis = ChassisInterface()
     try:
-        while chassis.data_interface.ok():
-            chassis.data_interface.sleep()
+        chassis.data_interface.spin()
+        chassis.data_interface.logi("Chassis interface stopped.")
     except KeyboardInterrupt:
         chassis.data_interface.logi("Received Ctrl-C.")
     finally:
