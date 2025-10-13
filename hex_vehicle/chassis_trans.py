@@ -70,55 +70,59 @@ class ChassisInterface:
 
     # pub
     def pub_ws_down(self, data: List[int]):
-        if not self.data_interface.ok():
-            return
-        msg = UInt8MultiArray()
-        msg.data = data
-        self.__ws_down_pub.publish(msg)
+        try:
+            msg = UInt8MultiArray()
+            msg.data = data
+            self.__ws_down_pub.publish(msg)
+        except Exception:
+            pass
 
     def pub_motor_status(self, pos: List[float], vel: List[float], eff: List[float]):
-        if not self.data_interface.ok():
-            return
-        length = len(pos)
-        msg = JointState()
-        msg.header.stamp = self.data_interface.get_timestamp()
-        msg.name = [f"joint{i}" for i in range(length)]
-        msg.position = pos
-        msg.velocity = vel
-        msg.effort = eff
-        self.__motor_status_pub.publish(msg)
+        try:
+            length = len(pos)
+            msg = JointState()
+            msg.header.stamp = self.data_interface.get_timestamp()
+            msg.name = [f"joint{i}" for i in range(length)]
+            msg.position = pos
+            msg.velocity = vel
+            msg.effort = eff
+            self.__motor_status_pub.publish(msg)
+        except Exception:
+            pass
 
     def pub_real_vel(self, x: float, y: float, yaw: float):
-        if not self.data_interface.ok():
-            return
-        msg = TwistStamped()
-        msg.header.stamp = self.data_interface.get_timestamp()
-        msg.header.frame_id = self.__frame_id
-        msg.twist.linear.x = x
-        msg.twist.linear.y = y
-        msg.twist.angular.z = yaw
-        self.__real_vel_pub.publish(msg)
+        try:
+            msg = TwistStamped()
+            msg.header.stamp = self.data_interface.get_timestamp()
+            msg.header.frame_id = self.__frame_id
+            msg.twist.linear.x = x
+            msg.twist.linear.y = y
+            msg.twist.angular.z = yaw
+            self.__real_vel_pub.publish(msg)
+        except Exception:
+            pass
 
     def pub_odom(self, pos_x: float, pos_y: float, pos_yaw: float, linear_x: float, linear_y: float, angular_z: float):
-        if not self.data_interface.ok():
-            return
-        out = Odometry()
-        out.header.stamp = self.data_interface.get_timestamp()
-        out.header.frame_id = "odom"
-        out.child_frame_id = self.__frame_id
-        out.pose.pose.position.x = pos_x
-        out.pose.pose.position.y = pos_y
-        out.pose.pose.position.z = 0.0
-        qz = np.sin(pos_yaw / 2.0)
-        qw = np.cos(pos_yaw / 2.0)
-        out.pose.pose.orientation.x = 0.0
-        out.pose.pose.orientation.y = 0.0
-        out.pose.pose.orientation.z = qz
-        out.pose.pose.orientation.w = qw
-        out.twist.twist.linear.x = linear_x
-        out.twist.twist.linear.y = linear_y
-        out.twist.twist.angular.z = angular_z
-        self.__odom_pub.publish(out)
+        try:
+            out = Odometry()
+            out.header.stamp = self.data_interface.get_timestamp()
+            out.header.frame_id = "odom"
+            out.child_frame_id = self.__frame_id
+            out.pose.pose.position.x = pos_x
+            out.pose.pose.position.y = pos_y
+            out.pose.pose.position.z = 0.0
+            qz = np.sin(pos_yaw / 2.0)
+            qw = np.cos(pos_yaw / 2.0)
+            out.pose.pose.orientation.x = 0.0
+            out.pose.pose.orientation.y = 0.0
+            out.pose.pose.orientation.z = qz
+            out.pose.pose.orientation.w = qw
+            out.twist.twist.linear.x = linear_x
+            out.twist.twist.linear.y = linear_y
+            out.twist.twist.angular.z = angular_z
+            self.__odom_pub.publish(out)
+        except Exception:
+            pass
 
     # sub
     def __ws_up_callback(self, msg: UInt8MultiArray):
@@ -311,7 +315,6 @@ def main():
     chassis = ChassisInterface()
     try:
         chassis.data_interface.spin()
-        chassis.data_interface.logi("Chassis interface stopped.")
     except KeyboardInterrupt:
         chassis.data_interface.logi("Received Ctrl-C.")
     finally:
