@@ -70,7 +70,7 @@ def generate_launch_description():
         }],
         remappings=[
             # subscribe
-            ('/motor_status', '/motor_status'),
+            ('/motor_states', '/motor_states'),
             ('/real_vel', '/real_vel'),
             ('/odom', '/odom'),
             # publish

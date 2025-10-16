@@ -7,7 +7,7 @@ Please check the [docs](https://docs.hexfellow.com/hex-base/ros_en/)
 | Topic           | Msg Type                     | Description               |
 | --------------- | ---------------------------- | ------------------------- |
 | /`ws_down`      | `std_msgs/UInt8MultiArray`   | Message from ws           |
-| /`motor_status` | `sensor_msgs/JointState`     | Every single motor status |
+| /`motor_states` | `sensor_msgs/JointState`     | Every single motor status |
 | /`real_vel`     | `geometry_msgs/TwistStamped` | Real velocity             |
 | /`odom`         | `nav_msgs/Odometry`          | Odometry                  |
 ## Subscribe

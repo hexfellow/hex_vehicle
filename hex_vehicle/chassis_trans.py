@@ -19,9 +19,9 @@ script_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(script_path)
 from ros_interface import DataInterface
 
-import public_api_down_pb2
-import public_api_types_pb2
-import public_api_up_pb2
+from generated import public_api_down_pb2
+from generated import public_api_types_pb2
+from generated import public_api_up_pb2
 
 class ChassisInterface:
     def __init__(self) -> None:
@@ -61,7 +61,7 @@ class ChassisInterface:
         self.__report_frequency = self.data_interface.get_parameter('report_freq')
 
         self.__ws_down_pub = self.data_interface.create_publisher(UInt8MultiArray, "ws_down")
-        self.__motor_status_pub = self.data_interface.create_publisher(JointState, "joint_states")
+        self.__motor_states_pub = self.data_interface.create_publisher(JointState, "motor_states")
         self.__real_vel_pub = self.data_interface.create_publisher(TwistStamped, "real_vel")
         self.__odom_pub = self.data_interface.create_publisher(Odometry, "odom")
 
@@ -75,7 +75,7 @@ class ChassisInterface:
         self.data_interface.create_subscriber(Bool, "clear_err", self.__clear_err_callback)
 
         self.__timeout_timer = self.data_interface.create_timer(0.1, self.__timeout_check_callback)
-        self.__session_timer = self.data_interface.create_timer(1.0, self.__session_check_callback)
+        self.__session_timer = self.data_interface.create_timer(3.0, self.__session_check_callback)
 
     @property
     def report_freq(self):
@@ -97,7 +97,7 @@ class ChassisInterface:
         except Exception:
             pass
 
-    def pub_motor_status(self, pos: List[float], vel: List[float], eff: List[float]):
+    def pub_motor_states(self, pos: List[float], vel: List[float], eff: List[float]):
         try:
             length = len(pos)
             msg = JointState()
@@ -106,7 +106,7 @@ class ChassisInterface:
             msg.position = pos
             msg.velocity = vel
             msg.effort = eff
-            self.__motor_status_pub.publish(msg)
+            self.__motor_states_pub.publish(msg)
         except Exception:
             pass
 
@@ -167,7 +167,7 @@ class ChassisInterface:
                 self.__is_set_vehicle_origin_position = True
         (relative_x, relative_y, relative_yaw) = self.get_vehicle_position(pos_x, pos_y, pos_z)
         # publish data
-        self.pub_motor_status(pp, vv, tt)
+        self.pub_motor_states(pp, vv, tt)
         self.pub_real_vel(spd_x, spd_y, spd_z)
         self.pub_odom(relative_x, relative_y, relative_yaw, spd_x, spd_y, spd_z)
 
@@ -264,17 +264,17 @@ class ChassisInterface:
             session_id = self.__session_id
             session_holder = self.__session_holder
         if session_id != session_holder:
-            self.data_interface.logw(f"You can not control this vehicle, because session holder is {session_holder}, but you are {session_id}")
+            self.data_interface.logw(f"You can not control this vehicle, because it is controlled by user : {session_holder}, your user id : {session_id}")
 
     def prase_wheel_data(self, api_up: public_api_up_pb2.APIUp) -> Tuple[list, list, list]:
         vv = []
         tt = []
         pp = []
         if api_up.base_status.IsInitialized():
-            for motor_status in api_up.base_status.motor_status:
-                torque = motor_status.torque
-                speed = motor_status.speed
-                position = (motor_status.position % motor_status.pulse_per_rotation) / motor_status.pulse_per_rotation * (2.0 * PI) - PI # radian
+            for motor_states in api_up.base_status.motor_status:
+                torque = motor_states.torque
+                speed = motor_states.speed
+                position = (motor_states.position % motor_states.pulse_per_rotation) / motor_states.pulse_per_rotation * (2.0 * PI) - PI # radian
                 tt.append(torque)
                 vv.append(speed)
                 pp.append(position)
