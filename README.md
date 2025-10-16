@@ -22,3 +22,4 @@ Please check the [docs](https://docs.hexfellow.com/hex-base/ros_en/)
 | ----------- | --------- | -------- | ------------- | --------------------- | ---- |
 | frame_id    | string    | yes      | base_link     | Robot base frame name |      |
 | simple_mode | bool      | yes      | true          | Is simple mode        |      |
+| report_freq | int       | yes      | 100           | Report frequency      |      |

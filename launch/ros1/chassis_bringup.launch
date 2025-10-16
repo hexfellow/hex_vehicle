@@ -4,6 +4,7 @@
     <arg name="read_only" default="false" />
     <arg name="frame_id" default="base_link" />
     <arg name="simple_mode" default="true" />
+    <arg name="report_freq" default="100" />
 
     <!-- node -->
     <node name="xnode_bridge" pkg="xpkg_bridge" type="xnode_bridge" respawn="false" output="screen" required="false">
@@ -18,6 +19,7 @@
         <!-- parameter -->
         <param name="frame_id" value="$(arg frame_id)" />
         <param name="simple_mode" value="$(arg simple_mode)" />
+        <param name="report_freq" value="$(arg report_freq)" />
         
         <remap from="/motor_status" to="/motor_status" />
         <remap from="/real_vel" to="/real_vel" />

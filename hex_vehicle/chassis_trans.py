@@ -35,6 +35,13 @@ class ChassisInterface:
             [0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0]
         ])
+        self.__report_frequency_map = {
+            50: public_api_types_pb2.ReportFrequency.Rf50Hz,
+            100: public_api_types_pb2.ReportFrequency.Rf100Hz,
+            250: public_api_types_pb2.ReportFrequency.Rf250Hz,
+            500: public_api_types_pb2.ReportFrequency.Rf500Hz,
+            1000: public_api_types_pb2.ReportFrequency.Rf1000Hz
+        }
 
         self.__parking_stop_detail = public_api_types_pb2.ParkingStopDetail()
         self.__last_warning_time = time.perf_counter()
@@ -48,8 +55,10 @@ class ChassisInterface:
 
         self.data_interface.set_parameter('frame_id', "base_link")
         self.data_interface.set_parameter('simple_mode', True)
+        self.data_interface.set_parameter('report_freq', 100)
         self.__frame_id = self.data_interface.get_parameter('frame_id')
         self.__simple_mode = self.data_interface.get_parameter('simple_mode')
+        self.__report_frequency = self.data_interface.get_parameter('report_freq')
 
         self.__ws_down_pub = self.data_interface.create_publisher(UInt8MultiArray, "ws_down")
         self.__motor_status_pub = self.data_interface.create_publisher(JointState, "joint_states")
@@ -67,6 +76,17 @@ class ChassisInterface:
 
         self.__timeout_timer = self.data_interface.create_timer(0.1, self.__timeout_check_callback)
         self.__session_timer = self.data_interface.create_timer(1.0, self.__session_check_callback)
+
+    @property
+    def report_freq(self):
+        return self.__report_frequency
+    
+    def get_report_freq(self, key: int):
+        if key not in self.__report_frequency_map:
+            self.data_interface.logw(f"report frequency only can be set to 50Hz ,100Hz, 250Hz, 500Hz, 1000Hz, but got {key}")
+            self.data_interface.logw(f"report frequency set to 100Hz by default")
+            self.__report_frequency = 100
+        return self.__report_frequency_map.get(key, public_api_types_pb2.ReportFrequency.Rf100Hz)
 
     # pub
     def pub_ws_down(self, data: List[int]):
@@ -313,8 +333,15 @@ class ChassisInterface:
     
 def main():
     chassis = ChassisInterface()
+    # set report frequency
+    set_report_frequency_msg = public_api_down_pb2.APIDown()
+    set_report_frequency_msg.set_report_frequency = chassis.get_report_freq(chassis.report_freq)
+    bin = set_report_frequency_msg.SerializeToString()
+    chassis.pub_ws_down(bin)
+    chassis.data_interface.logi(f"Set report frequency to {chassis.report_freq}Hz.")
     try:
-        chassis.data_interface.spin()
+        while chassis.data_interface.ok():
+            chassis.data_interface.sleep()
     except KeyboardInterrupt:
         chassis.data_interface.logi("Received Ctrl-C.")
     finally:

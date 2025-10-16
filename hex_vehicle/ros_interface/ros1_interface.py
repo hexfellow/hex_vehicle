@@ -13,17 +13,13 @@ class DataInterface(InterfaceBase):
         # ros node
         rospy.init_node(self._node_name, anonymous=True)
         self.__rate = rospy.Rate(300.0)
-        self.__subscribers = []  # Keep track of all subscribers
-        self.__publishers = []   # Keep track of all publishers
 
     def create_publisher(self, msg_type, topic: str, queue_size: int = 10):
         pub = rospy.Publisher(topic, msg_type, queue_size=queue_size)
-        self.__publishers.append(pub)
         return pub
 
     def create_subscriber(self, msg_type, topic: str, callback, queue_size: int = 10):
-        sub = rospy.Subscriber(topic, msg_type, callback, queue_size=queue_size)
-        self.__subscribers.append(sub)
+        rospy.Subscriber(topic, msg_type, callback, queue_size=queue_size)
 
     def create_timer(self, interval_sec: float, callback):
         # Wrap callback to ignore TimerEvent parameter from ROS1
@@ -49,39 +45,43 @@ class DataInterface(InterfaceBase):
         return not rospy.is_shutdown()
 
     def shutdown(self):
-        # Step 1: Unregister all subscribers to stop receiving messages
-        for sub in self.__subscribers:
-            sub.unregister()
-        self.__subscribers.clear()
-
-        # Step 2: Give a short grace period for ongoing callbacks to finish
-        time.sleep(0.05)  # 50ms should be enough
-
-        # Step 3: Unregister all publishers
-        for pub in self.__publishers:
-            pub.unregister()
-        self.__publishers.clear()
-
-        # Step 4: Finally signal shutdown
-        rospy.signal_shutdown("Shutdown")
+        try:
+            rospy.signal_shutdown("Shutdown")
+        except Exception:
+            pass
 
     def sleep(self):
         self.__rate.sleep()
 
     def logd(self, msg, *args, **kwargs):
-        rospy.logdebug(msg, *args, **kwargs)
+        try:
+            rospy.logdebug(msg, *args, **kwargs)
+        except Exception:
+            pass
 
     def logi(self, msg, *args, **kwargs):
-        rospy.loginfo(msg, *args, **kwargs)
+        try:
+            rospy.loginfo(msg, *args, **kwargs)
+        except Exception:
+            pass
 
     def logw(self, msg, *args, **kwargs):
-        rospy.logwarn(msg, *args, **kwargs)
+        try:
+            rospy.logwarn(msg, *args, **kwargs)
+        except Exception:
+            pass
 
     def loge(self, msg, *args, **kwargs):
-        rospy.logerr(msg, *args, **kwargs)
+        try:
+            rospy.logerr(msg, *args, **kwargs)
+        except Exception:
+            pass
 
     def logf(self, msg, *args, **kwargs):
-        rospy.logfatal(msg, *args, **kwargs)
+        try:
+            rospy.logfatal(msg, *args, **kwargs)
+        except Exception:
+            pass
 
     def get_pkg_share_path(self, package_name: str) -> str:
         try:

@@ -32,6 +32,12 @@ def generate_launch_description():
         description='Simple mode of the chassis.'
     )
 
+    report_freq = DeclareLaunchArgument(
+        'report_freq',
+        default_value='100',
+        description='Report frequency of the chassis.'
+    )
+
     # Define the node
     xpkg_bridge_node = Node(
         package='xpkg_bridge',
@@ -60,6 +66,7 @@ def generate_launch_description():
         parameters=[{
             'frame_id': LaunchConfiguration('frame_id'),
             'simple_mode': LaunchConfiguration('simple_mode'),
+            'report_freq': LaunchConfiguration('report_freq'),
         }],
         remappings=[
             # subscribe
@@ -79,6 +86,7 @@ def generate_launch_description():
         read_only,
         frame_id,
         simple_mode,
+        report_freq,
         xpkg_bridge_node,
         hex_vehicle_node
     ])
