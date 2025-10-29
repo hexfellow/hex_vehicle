@@ -10,7 +10,7 @@ def generate_launch_description():
     # Declare the launch arguments
     url = DeclareLaunchArgument(
         'url',
-        default_value='',
+        default_value='ws://172.18.26.115:8439',
         description='The URL of the robot.'
     )
 

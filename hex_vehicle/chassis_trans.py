@@ -23,6 +23,8 @@ from generated import public_api_down_pb2
 from generated import public_api_types_pb2
 from generated import public_api_up_pb2
 
+ACCEPTABLE_PROTOCOL_MAJOR_VERSION = 1
+
 class ChassisInterface:
     def __init__(self) -> None:
         self.data_interface = DataInterface(node_name = "chassis_trans")
@@ -48,6 +50,8 @@ class ChassisInterface:
 
         self.__session_id = None
         self.__session_holder = None
+
+        self.__protocol_major_version = None
 
         # Timeout monitoring
         self.__last_cmd_time = None  # Last control command timestamp
@@ -79,7 +83,13 @@ class ChassisInterface:
 
     @property
     def report_freq(self):
-        return self.__report_frequency
+        with self.__lock:
+            return self.__report_frequency
+    
+    @property
+    def protocol_major_version(self):
+        with self.__lock:
+            return self.__protocol_major_version
     
     def get_report_freq(self, key: int):
         if key not in self.__report_frequency_map:
@@ -156,6 +166,7 @@ class ChassisInterface:
                 self.__parking_stop_detail = public_api_types_pb2.ParkingStopDetail()
             self.__session_id = api_up.session_id
             self.__session_holder = api_up.base_status.session_holder
+            self.__protocol_major_version = api_up.protocol_major_version
         self.__check_parking_stop_detail()
         # parse data
         pp, vv, tt = self.prase_wheel_data(api_up)
@@ -339,6 +350,12 @@ def main():
     bin = set_report_frequency_msg.SerializeToString()
     chassis.pub_ws_down(bin)
     chassis.data_interface.logi(f"Set report frequency to {chassis.report_freq}Hz.")
+
+    time.sleep(0.1)
+
+    # check protocol major version
+    if chassis.protocol_major_version is not None and chassis.protocol_major_version != 1:
+        chassis.data_interface.logw(f"Protocol major version is not {ACCEPTABLE_PROTOCOL_MAJOR_VERSION}, current version: {chassis.protocol_major_version}.This might cause compatibility issues. Consider upgrading the base firmware.")
     try:
         while chassis.data_interface.ok():
             chassis.data_interface.sleep()
