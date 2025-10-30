@@ -167,6 +167,8 @@ class ChassisInterface:
             self.__session_id = api_up.session_id
             self.__session_holder = api_up.base_status.session_holder
             self.__protocol_major_version = api_up.protocol_major_version
+        if api_up.HasField("log"):
+            self.data_interface.logw(f"Log from base: {api_up.log}")
         self.__check_parking_stop_detail()
         # parse data
         pp, vv, tt = self.prase_wheel_data(api_up)
