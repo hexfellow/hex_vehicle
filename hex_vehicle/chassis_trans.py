@@ -45,6 +45,7 @@ class ChassisInterface:
             1000: public_api_types_pb2.ReportFrequency.Rf1000Hz,
         }
 
+        self.__motor_count = None
         self.__parking_stop_detail = public_api_types_pb2.ParkingStopDetail()
         self.__last_warning_time = time.perf_counter()
 
@@ -70,10 +71,9 @@ class ChassisInterface:
         self.__motor_states_pub = self.data_interface.create_publisher(
             JointState, "motor_states"
         )
-        self.__real_vel_pub = self.data_interface.create_publisher(
-            TwistStamped, "real_vel"
+        self.__odom_pub = self.data_interface.create_publisher(
+            Odometry, "odom"
         )
-        self.__odom_pub = self.data_interface.create_publisher(Odometry, "odom")
 
         self.data_interface.create_subscriber(
             UInt8MultiArray, "ws_up", self.__ws_up_callback
@@ -146,18 +146,6 @@ class ChassisInterface:
         except Exception:
             pass
 
-    def pub_real_vel(self, x: float, y: float, yaw: float):
-        try:
-            msg = TwistStamped()
-            msg.header.stamp = self.data_interface.get_timestamp()
-            msg.header.frame_id = self.__frame_id
-            msg.twist.linear.x = x
-            msg.twist.linear.y = y
-            msg.twist.angular.z = yaw
-            self.__real_vel_pub.publish(msg)
-        except Exception:
-            pass
-
     def pub_odom(
         self,
         pos_x: float,
@@ -204,12 +192,10 @@ class ChassisInterface:
                     self.__parking_stop_detail = (
                         public_api_types_pb2.ParkingStopDetail()
                     )
+                self.__motor_count = len(api_up.base_status.motor_status)
                 self.__session_id = api_up.session_id
                 self.__session_holder = api_up.base_status.session_holder
                 self.__protocol_major_version = api_up.protocol_major_version
-
-            if api_up.HasField("log"):
-                self.data_interface.logw(f"Log from base: {api_up.log}")
 
             self.__check_parking_stop_detail()
 
@@ -218,7 +204,6 @@ class ChassisInterface:
             (spd_x, spd_y, spd_z), (pos_x, pos_y, pos_z) = self.parse_vehicle_data(
                 api_up
             )
-            acc, angular_velocity, quaternion = self.parse_imu_data(api_up)
 
             with self.__lock:
                 if not self.__is_set_vehicle_origin_position:
@@ -231,7 +216,6 @@ class ChassisInterface:
 
             # publish data
             self.pub_motor_states(pp, vv, tt)
-            self.pub_real_vel(spd_x, spd_y, spd_z)
             self.pub_odom(relative_x, relative_y, relative_yaw, spd_x, spd_y, spd_z)
 
         except AttributeError as e:
@@ -248,21 +232,23 @@ class ChassisInterface:
         with self.__lock:
             self.__last_cmd_time = time.time()
             api_initialized = self.__api_initialized
+            motor_count = self.__motor_count
         if not api_initialized:
             api_init = public_api_down_pb2.APIDown()
             api_init.base_command.api_control_initialize = True
             bin = api_init.SerializeToString()
             self.pub_ws_down(bin)
-        length = len(msg.name)
+        if motor_count == None:
+            return
         if (
-            length != len(msg.position)
-            or length != len(msg.velocity)
-            or length != len(msg.effort)
+            motor_count != len(msg.position)
+            or motor_count != len(msg.velocity)
+            or motor_count != len(msg.effort)
         ):
-            self.data_interface.logw("JointState message format error.")
+            self.data_interface.logw("Motor count mismatch")
             return
         api_down = public_api_down_pb2.APIDown()
-        for i in range(length):
+        for i in range(motor_count):
             joint_cmd = api_down.base_command.motor_targets.targets.add()
             # joint_cmd.position = msg.position[i]
             joint_cmd.speed = msg.velocity[i]
@@ -313,12 +299,9 @@ class ChassisInterface:
                 if elapsed > self.__timeout_threshold:
                     need_disable = True
 
-        # Send disable command and shutdown node
         if need_disable:
-            self.data_interface.loge(
-                "chassis disabled due to command timeout, please restart node !!!"
-            )
-            # Send disable command
+            self.data_interface.cancel_timer(self.__timeout_timer)
+            self.data_interface.loge("Chassis disabled due to command timeout")
             api_down = public_api_down_pb2.APIDown(
                 base_command=public_api_types_pb2.BaseCommand(
                     api_control_initialize=False
@@ -326,9 +309,10 @@ class ChassisInterface:
             )
             bin = api_down.SerializeToString()
             self.pub_ws_down(list(bin))
-            # Shutdown node
-            self.data_interface.cancel_timer(self.__timeout_timer)
-            self.data_interface.shutdown()
+            
+            time.sleep(0.1)
+            thread = threading.Thread(target=self.data_interface.shutdown)
+            thread.start()
 
     def __check_parking_stop_detail(self):
         start_time = time.perf_counter()
@@ -464,8 +448,7 @@ def main():
             f"Protocol major version is not {ACCEPTABLE_PROTOCOL_MAJOR_VERSION}, current version: {chassis.protocol_major_version}.This might cause compatibility issues. Consider upgrading the base firmware."
         )
     try:
-        while chassis.data_interface.ok():
-            chassis.data_interface.sleep()
+        chassis.data_interface.spin()
     except KeyboardInterrupt:
         print("Recived Ctrl-C")
     except Exception:

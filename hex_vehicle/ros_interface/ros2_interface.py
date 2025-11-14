@@ -16,9 +16,6 @@ class DataInterface(InterfaceBase):
         self.__logger = self.__node.get_logger()
         self.__rate = self.__node.create_rate(300.0)
 
-        self.__spin_thread = threading.Thread(target=self.spin)
-        self.__spin_thread.start()
-
     def create_publisher(self, msg_type, topic: str, queue_size: int = 10):
         return self.__node.create_publisher(msg_type, topic, queue_size)
 
@@ -50,19 +47,9 @@ class DataInterface(InterfaceBase):
 
     def shutdown(self):
         try:
-            # First shutdown rclpy to stop spin thread
-            if rclpy.ok():
-                rclpy.shutdown()
-            # Wait for spin thread to finish
-            if self.__spin_thread and self.__spin_thread.is_alive():
-                self.__spin_thread.join(timeout=1.0)
-            # Then destroy node
-            try:
-                self.__node.destroy_node()
-            except Exception:
-                pass
+            self.__node.destroy_node()
+            rclpy.shutdown()
         except Exception:
-            # Ignore any shutdown errors
             pass
 
     def sleep(self):
@@ -97,13 +84,6 @@ class DataInterface(InterfaceBase):
             self.__logger.fatal(msg, *args, **kwargs)  
         except Exception:
             pass
-
-    def get_pkg_share_path(self, package_name: str) -> str:
-        try:
-            return get_package_share_directory(package_name)
-        except Exception as e:
-            self.loge(f"An error occurred while getting the path for package '{package_name}': {e}")
-            return ""
 
     def get_timestamp(self):
         return self.__node.get_clock().now().to_msg()

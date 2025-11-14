@@ -5,9 +5,16 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     # Declare the launch arguments
+    enable_bridge = DeclareLaunchArgument(
+        'enable_bridge',
+        default_value='false',
+        description='Whether to enable the xpkg_bridge node, you can set it to false if you want to launch the node separately.'
+    )
+
     url = DeclareLaunchArgument(
         'url',
         default_value='ws://172.18.26.115:8439',
@@ -18,6 +25,12 @@ def generate_launch_description():
         'read_only',
         default_value='false',
         description='Whether to read only the chassis state.'
+    )
+
+    is_kcp = DeclareLaunchArgument(
+        'is_kcp',
+        default_value='true',
+        description='Whether to use KCP protocol.'
     )
 
     frame_id = DeclareLaunchArgument(
@@ -39,15 +52,17 @@ def generate_launch_description():
     )
 
     # Define the node
-    xpkg_bridge_node = Node(
-        package='xpkg_bridge',
-        executable='xnode_bridge',
-        name='xnode_bridge',
+    hex_bridge_node = Node(
+        package='hex_bridge',
+        executable='hex_bridge',
+        name='hex_bridge',
         output='screen',
         emulate_tty=True,
+        condition=IfCondition(LaunchConfiguration('enable_bridge')),
         parameters=[{
             'url': LaunchConfiguration('url'),
             'read_only': LaunchConfiguration('read_only'),
+            'is_kcp': LaunchConfiguration('is_kcp'),
         }],
         remappings=[
             # subscribe
@@ -71,7 +86,6 @@ def generate_launch_description():
         remappings=[
             # subscribe
             ('/motor_states', '/motor_states'),
-            ('/real_vel', '/real_vel'),
             ('/odom', '/odom'),
             # publish
             ('/joint_ctrl', '/joint_ctrl'),
@@ -82,11 +96,13 @@ def generate_launch_description():
 
     # Return the LaunchDescription
     return LaunchDescription([
+        enable_bridge,
         url,
         read_only,
+        is_kcp,
         frame_id,
         simple_mode,
         report_freq,
-        xpkg_bridge_node,
+        hex_bridge_node,
         hex_vehicle_node
     ])

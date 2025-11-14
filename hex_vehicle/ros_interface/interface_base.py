@@ -82,23 +82,8 @@ class InterfaceBase(ABC):
     @abstractmethod
     def logf(self, msg, *args, **kwargs):
         raise NotImplementedError("logf")
-    
-    @abstractmethod
-    def get_pkg_share_path(self, package_name: str) -> str:
-        raise NotImplementedError("get_pkg_share_path")
 
     @abstractmethod
     def get_timestamp(self):
         raise NotImplementedError("get_timestamp")
-
-    def load_from_json(self, json_path: str):
-        try:
-            with open(json_path, "r") as f:
-                json_data = json.load(f)
-                return json_data
-        except FileNotFoundError:
-            self.loge(f"Error: File not found: {json_path}.")
-        except json.JSONDecodeError:
-            self.loge(f"Error: Failed to decode JSON from {json_path}.")
-        except Exception as e:
-            self.loge(f"Error: An unexpected error occurred while loading {json_path}: {e}.")
+    
