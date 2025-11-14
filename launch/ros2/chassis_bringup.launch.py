@@ -12,12 +12,12 @@ def generate_launch_description():
     enable_bridge = DeclareLaunchArgument(
         'enable_bridge',
         default_value='false',
-        description='Whether to enable the xpkg_bridge node, you can set it to false if you want to launch the node separately.'
+        description='Whether to enable the hex_bridge node, you can set it to false if you want to launch the node separately.'
     )
 
     url = DeclareLaunchArgument(
         'url',
-        default_value='ws://172.18.26.115:8439',
+        default_value='0.0.0.0:8439',
         description='The URL of the robot.'
     )
 
